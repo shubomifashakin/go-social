@@ -6,7 +6,7 @@ type Mailer struct {
 	client *resend.Client
 }
 
-type mail struct {
+type Mail struct {
 	From string
 	To []string
 	Subject string
@@ -15,7 +15,7 @@ type mail struct {
 	Cc []string
 }
 
-func (m *Mailer) SendMail(body mail)(string,error) {
+func (m *Mailer)SendMail(body Mail)(string,error) {
 	res,err:=m.client.Emails.Send(&resend.SendEmailRequest{
 		From: body.From,
 		To: body.To,
