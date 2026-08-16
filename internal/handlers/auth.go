@@ -264,3 +264,139 @@ func (a *AuthHandler) Login(w http.ResponseWriter, r *http.Request){
 
 	utils.WriteResponse(w,http.StatusOK,models.MessageResponse{Message: "Success"})
 }
+
+func (a *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request){
+	ctx,cancel:= context.WithTimeout(r.Context(),10*time.Second)
+	defer cancel()
+
+	// get the refresh token from the cookies
+	cookieRefreshToken,err:= r.Cookie("refresh-token")
+
+	if err != nil {
+		a.Logger.Debug("Refresh token does not exist")
+
+		utils.WriteResponse(w, http.StatusUnauthorized, models.MessageResponse{Message: "Unauthorized"})
+		return
+	}
+
+	// verify the refresh token
+	verifiedToken,err:= utils.VerifyRefreshToken(cookieRefreshToken.Value)
+
+	if err != nil {
+		a.Logger.Debug("Refresh token is invalid")
+
+		utils.WriteResponse(w, http.StatusUnauthorized, models.MessageResponse{Message: "Unauthorized"})
+		return
+	}
+
+	// get the refresh token id from the jwt
+	tokenId:= verifiedToken.ID
+
+	// get the refresh token from the db and check if it has expired
+	oldRefreshToken,err:= repository.FindRefreshTokenByTokenId(ctx,a.DB,tokenId)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, models.ErrNotFound):
+			utils.WriteResponse(w, http.StatusUnauthorized, models.MessageResponse{Message: "Unauthorized"})
+		default:
+			a.Logger.Error("Failed to find refresh token", zap.Error(err))
+
+			utils.WriteResponse(w, http.StatusInternalServerError, models.MessageResponse{Message: "Internal server error"})
+		}
+		return
+	}	
+
+	if oldRefreshToken.ExpiresAt.Before(time.Now()) {
+		a.Logger.Debug("Refresh token has expired")
+
+		utils.WriteResponse(w, http.StatusUnauthorized,models.MessageResponse{Message: "Unauthorized"})
+		return
+	}
+
+	// get the users info from the db
+	user,err:= repository.FindUserById(ctx,a.DB,oldRefreshToken.UserID)
+
+	if err != nil {
+		a.Logger.Error("Failed to get user info",zap.Error(err))
+
+		utils.WriteResponse(w, http.StatusInternalServerError,models.MessageResponse{Message: "Internal server error"})
+		return	
+	}
+
+	// generate the jwts
+	accessTokenId:= uuid.NewString()
+	refreshTokenId:= uuid.NewString()
+
+	accessTokenExpiresAt:= time.Now().Add(10*time.Minute)
+	refreshExpiresAt:= time.Now().Add(14*24*time.Hour)
+
+	accessClaims:=models.AccessTokenClaims{
+		Role: user.Role,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject: user.ID,
+			ExpiresAt: jwt.NewNumericDate(accessTokenExpiresAt),
+			IssuedAt: jwt.NewNumericDate(time.Now()),
+			ID: accessTokenId,
+		},
+	}
+
+	refreshClaims:= models.RefreshTokenClaims{
+		RegisteredClaims: jwt.RegisteredClaims{	Subject: user.ID,
+			ExpiresAt: jwt.NewNumericDate(refreshExpiresAt),
+			IssuedAt: jwt.NewNumericDate(time.Now()),
+			ID: refreshTokenId,
+			},
+	}
+
+	accessToken,accessErr:=utils.SignToken(accessClaims)
+	refreshToken,refreshErr:=utils.SignToken(refreshClaims)
+
+	if accessErr != nil || refreshErr!= nil {
+		if accessErr != nil {
+			a.Logger.Error("Failed to generate access token",zap.Error(accessErr))
+		}else{
+			a.Logger.Error("Failed to generate refresh token",zap.Error(refreshErr))
+		}
+
+		utils.WriteResponse(w,http.StatusInternalServerError,models.MessageResponse{Message: "Internal server error"})
+
+		return
+	}
+
+	// rotate the refresh token
+	err=repository.RotateRefreshToken(ctx,a.DB,user.ID,oldRefreshToken.TokenID,refreshTokenId,refreshExpiresAt)
+
+	if err !=nil {
+		a.Logger.Error("Failed to rotate refresh token",zap.Error(err))
+
+		utils.WriteResponse(w,http.StatusInternalServerError,models.MessageResponse{Message: "Internal server error"})
+		return
+	}
+
+	// set the access and refresh token as cookies
+	http.SetCookie(w,&http.Cookie{
+		Name: "access-token",
+		HttpOnly: true,
+		Domain: "localhost",
+		Secure: true,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge: int(time.Until(accessTokenExpiresAt).Seconds()),
+		Expires: accessTokenExpiresAt,
+		Value: accessToken,
+	})
+
+	http.SetCookie(w,&http.Cookie{
+		Name: "refresh-token",
+		HttpOnly: true,
+		Domain: "localhost",
+		Secure: true,
+		SameSite: http.SameSiteLaxMode,
+		Expires:refreshExpiresAt,
+		MaxAge: int(time.Until(refreshExpiresAt).Seconds()),
+		Value: refreshToken,
+	})
+
+	// return the response to the user, setting the cookies
+	utils.WriteResponse(w,http.StatusOK, models.MessageResponse{Message: "Success"})
+}

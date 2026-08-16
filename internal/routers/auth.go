@@ -21,4 +21,5 @@ func CreateAuthRouter(m *http.ServeMux, db *sql.DB, cache *cache.Cache, mailer *
 
 	m.HandleFunc("POST /auth/sign-up",authInstance.SignUp)
 	m.HandleFunc("POST /auth/login",authInstance.Login)
+	m.HandleFunc("POST /auth/refresh",authInstance.Refresh)
 }

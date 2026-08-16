@@ -22,7 +22,7 @@ func SignToken(claims jwt.Claims) (string,error) {
 }
 
 
-func VerifyAccessToken(tokenString string) (*jwt.Token,error){
+func VerifyAccessToken(tokenString string) (*models.AccessTokenClaims, error){
 	key:= os.Getenv("JWT_PRIVATE_KEY")
 	
 	if key == "" {
@@ -35,12 +35,16 @@ func VerifyAccessToken(tokenString string) (*jwt.Token,error){
 		}
 		return []byte(key), nil
 	})
+
+	if err != nil {
+		return nil,err
+	}
 	
 
-	return token,err
+	return token.Claims.(*models.AccessTokenClaims),err
 }
 
-func VerifyRefreshToken(tokenString string) (*jwt.Token,error){
+func VerifyRefreshToken(tokenString string) (*models.RefreshTokenClaims, error){
 	key:= os.Getenv("JWT_PRIVATE_KEY")
 	
 	if key == "" {
@@ -53,7 +57,10 @@ func VerifyRefreshToken(tokenString string) (*jwt.Token,error){
 		}
 		return []byte(key), nil
 	})
-	
 
-	return token,err
+	if err != nil {
+		return nil,err
+	}
+
+	return token.Claims.(*models.RefreshTokenClaims),err
 }
