@@ -134,3 +134,19 @@ func RotateRefreshToken(ctx context.Context, db *sql.DB, userId string, oldToken
 	
 	return nil
 }
+
+func DeleteRefreshTokenByTokenId(ctx context.Context,db *sql.DB, tokenId string) error {
+	query:= `DELETE from refresh_tokens WHERE token_id = $1;`
+
+	res, err := db.ExecContext(ctx, query, tokenId)
+	if err != nil {
+		return err
+	}
+	
+	count, _ := res.RowsAffected()
+	if count < 1 {
+		return models.ErrNotFound
+	}
+	
+	return nil	
+}

@@ -266,6 +266,60 @@ func (a *AuthHandler) Login(w http.ResponseWriter, r *http.Request){
 	utils.WriteResponse(w,http.StatusOK,models.MessageResponse{Message: "Success"})
 }
 
+func (a *AuthHandler) Logout(w http.ResponseWriter, r *http.Request){
+	ctx,cancel:= context.WithTimeout(r.Context(),10*time.Second)
+	defer cancel()
+
+	// get the refresh token from the cookie
+	cookieRefreshToken,err:= r.Cookie("refresh-token")
+	if err != nil {
+		a.Logger.Debug("Failed to get refresh token from the cookies",zap.Error(err))
+
+		utils.WriteResponse(w,http.StatusUnauthorized,models.MessageResponse{Message: "Unauthorized"})
+		return
+	}
+	
+	// extract the refreshtokenId from the token
+	claims,err:= utils.VerifyRefreshToken(cookieRefreshToken.Value)
+	if err != nil {
+		a.Logger.Debug("Refresh token verification failed",zap.Error(err))
+
+		utils.WriteResponse(w,http.StatusUnauthorized,models.MessageResponse{Message: "Unauthorized"})
+		return
+	}
+	
+	// delete the refresh token with that id from the db
+	err= repository.DeleteRefreshTokenByTokenId(ctx,a.DB,claims.ID)
+	if err != nil {
+		a.Logger.Error("Failed to delete refresh token",zap.Error(err))
+
+		utils.WriteResponse(w,http.StatusInternalServerError,models.MessageResponse{Message: "Internal Server Error"})
+		return
+	}
+
+	// clear the cookies by setting MaxAge to -1 and expiring them in the past
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access-token",
+		Value:    "",
+		HttpOnly: true,
+		MaxAge:   -1,
+		Domain: "localhost",
+		Expires:  time.Unix(0, 0),
+	})
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh-token",
+		Value:    "",
+		HttpOnly: true,
+		MaxAge:   -1,
+		Domain: "localhost",
+		Expires:  time.Unix(0, 0),
+	})
+
+	utils.WriteResponse(w,http.StatusOK,models.MessageResponse{
+		Message: "Success",
+	})
+}
+
 func (a *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request){
 	ctx,cancel:= context.WithTimeout(r.Context(),10*time.Second)
 	defer cancel()
