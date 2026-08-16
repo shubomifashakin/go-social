@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -78,4 +79,42 @@ func (p *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request){
 
 	// write the response 
 	utils.WriteResponse(w, http.StatusCreated,models.MessageResponse{Message: "Success"})
+}
+
+func (p *PostsHandler) DeletePost(w http.ResponseWriter, r *http.Request){
+	ctx, cancel:= context.WithTimeout(r.Context(),10 *time.Second)
+	defer cancel()
+
+	// get the post id from the request path
+	postId:= r.PathValue("id")
+
+	if postId == "" {
+		p.Logger.Debug("Invalid post id")
+
+		utils.WriteResponse(w, http.StatusBadRequest, models.MessageResponse{Message: "Invalid post id"})
+		return
+	}
+
+	// delete the post from the database
+	err:= repository.DeletePost(ctx,p.DB,postId)
+	if err != nil {
+		p.Logger.Error("Failed to delete post from DB",zap.Error(err))
+
+		utils.WriteResponse(w, http.StatusInternalServerError,models.MessageResponse{Message: "Internal server error"})
+		return
+	}
+
+	// delete the post from cache
+	err=p.Cache.Delete(ctx,makePostCacheKey(postId))
+
+	if err != nil {
+		p.Logger.Error("Failed to delete post from cache",zap.Error(err))
+	}
+
+	// return the response
+	utils.WriteResponse(w,http.StatusOK,models.MessageResponse{Message: "Success"})
+}
+
+func makePostCacheKey(postId string) string{
+	return fmt.Sprintf("post:%s",postId)
 }

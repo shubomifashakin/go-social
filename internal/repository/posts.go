@@ -20,3 +20,15 @@ func CreatePost(ctx context.Context,db *sql.DB,userId string, post models.Create
 
 	return id, nil
 }
+
+func DeletePost(ctx context.Context, db *sql.DB, postId string) error {
+	query:= `DELETE FROM posts WHERE id= $1`
+
+	_,err:=db.ExecContext(ctx,query,postId)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
