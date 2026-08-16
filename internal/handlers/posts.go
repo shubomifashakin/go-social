@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/redis/go-redis/v9"
 	"github.com/shubomifashakin/go-social/internal/cache"
 	"github.com/shubomifashakin/go-social/internal/middlewares"
 	"github.com/shubomifashakin/go-social/internal/models"
@@ -96,7 +97,7 @@ func (p *PostsHandler) DeletePost(w http.ResponseWriter, r *http.Request){
 	}
 
 	// delete the post from the database
-	err:= repository.DeletePost(ctx,p.DB,postId)
+	err:= repository.DeletePostById(ctx,p.DB,postId)
 	if err != nil {
 		p.Logger.Error("Failed to delete post from DB",zap.Error(err))
 
@@ -114,6 +115,58 @@ func (p *PostsHandler) DeletePost(w http.ResponseWriter, r *http.Request){
 	// return the response
 	utils.WriteResponse(w,http.StatusOK,models.MessageResponse{Message: "Success"})
 }
+
+func (p *PostsHandler) GetPost(w http.ResponseWriter, r *http.Request){
+	ctx, cancel:= context.WithTimeout(r.Context(),10 *time.Second)
+	defer cancel()
+
+	// get the post id from the request path
+	postId:= r.PathValue("id")
+
+	if postId == "" {
+		p.Logger.Debug("Invalid post id")
+
+		utils.WriteResponse(w, http.StatusBadRequest, models.MessageResponse{Message: "Invalid post id"})
+		return
+	}
+	cacheKey:=makePostCacheKey(postId)
+
+	// get the post from the cache
+	var post models.Post
+	err:= p.Cache.GetJSON(ctx,cacheKey,&post)
+	
+	if err != nil {	
+		if errors.Is(err, redis.Nil){
+				p.Logger.Info("Cache Miss: Post does not exist")
+		}else{
+				p.Logger.Info("Cache error", zap.Error(err))
+		}
+	} else{
+			p.Logger.Debug("Cache hit: Post returned from cache")
+			utils.WriteResponse(w,http.StatusOK,post)
+			return
+	}
+
+	// get the post from the database
+	post,err= repository.GetPostById(ctx,p.DB,postId)
+	if err != nil {
+		p.Logger.Error("Failed to get post from DB",zap.Error(err))
+
+		utils.WriteResponse(w, http.StatusInternalServerError,models.MessageResponse{Message: "Internal server error"})
+		return
+	}
+
+	// set the post in cache
+	err=p.Cache.SetJSON(ctx,cacheKey,post, time.Minute*5)
+
+	if err != nil {
+		p.Logger.Error("Failed to delete post from cache",zap.Error(err))
+	}
+
+	// return the response
+	utils.WriteResponse(w,http.StatusOK,models.MessageResponse{Message: "Success"})
+}
+
 
 func makePostCacheKey(postId string) string{
 	return fmt.Sprintf("post:%s",postId)

@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/shubomifashakin/go-social/internal/models"
 )
@@ -21,7 +22,7 @@ func CreatePost(ctx context.Context,db *sql.DB,userId string, post models.Create
 	return id, nil
 }
 
-func DeletePost(ctx context.Context, db *sql.DB, postId string) error {
+func DeletePostById(ctx context.Context, db *sql.DB, postId string) error {
 	query:= `DELETE FROM posts WHERE id= $1`
 
 	_,err:=db.ExecContext(ctx,query,postId)
@@ -31,4 +32,20 @@ func DeletePost(ctx context.Context, db *sql.DB, postId string) error {
 	}
 
 	return nil
+}
+func GetPostById(ctx context.Context, db *sql.DB, postId string) (models.Post, error) {
+	query:= `SELECT id, user_id, content, created_at FROM posts WHERE id= $1`
+
+	var post models.Post
+	err:=db.QueryRowContext(ctx,query,postId).Scan(&post.ID,&post.UserID,&post.Content, &post.CreatedAt)
+
+	if err != nil {
+		if errors.Is(err,sql.ErrNoRows){
+			return post,models.ErrNotFound
+		}
+		
+		return post, err
+	}
+
+	return post,nil
 }
