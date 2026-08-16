@@ -22,17 +22,23 @@ func CreatePost(ctx context.Context,db *sql.DB,userId string, post models.Create
 	return id, nil
 }
 
-func DeletePostById(ctx context.Context, db *sql.DB, postId string) error {
-	query:= `DELETE FROM posts WHERE id= $1`
+func DeletePostById(ctx context.Context, db *sql.DB, postId string, userId string) error {
+	query:= `DELETE FROM posts WHERE id= $1 AND user_id = $2`
 
-	_,err:=db.ExecContext(ctx,query,postId)
+	res,err:=db.ExecContext(ctx,query,postId,userId)
 
 	if err != nil {
 		return err
 	}
 
+	count, _ := res.RowsAffected()
+	if count < 1 {
+		return models.ErrNotFound
+	}
+
 	return nil
 }
+
 func GetPostById(ctx context.Context, db *sql.DB, postId string) (models.Post, error) {
 	query:= `SELECT id, user_id, content, created_at FROM posts WHERE id= $1`
 
@@ -43,7 +49,7 @@ func GetPostById(ctx context.Context, db *sql.DB, postId string) (models.Post, e
 		if errors.Is(err,sql.ErrNoRows){
 			return post,models.ErrNotFound
 		}
-		
+
 		return post, err
 	}
 

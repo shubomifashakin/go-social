@@ -86,6 +86,14 @@ func (p *PostsHandler) DeletePost(w http.ResponseWriter, r *http.Request){
 	ctx, cancel:= context.WithTimeout(r.Context(),10 *time.Second)
 	defer cancel()
 
+	userInfo,ok:= r.Context().Value(middlewares.UserCtxKey).(models.UserRequestCtx)
+	if !ok {
+		p.Logger.Debug("User is unauthorized")
+
+		utils.WriteResponse(w, http.StatusUnauthorized,models.MessageResponse{Message: "Unauthorized"})
+		return
+	}
+
 	// get the post id from the request path
 	postId:= r.PathValue("id")
 
@@ -97,8 +105,13 @@ func (p *PostsHandler) DeletePost(w http.ResponseWriter, r *http.Request){
 	}
 
 	// delete the post from the database
-	err:= repository.DeletePostById(ctx,p.DB,postId)
+	err:= repository.DeletePostById(ctx,p.DB,postId, userInfo.UserId)
 	if err != nil {
+		if errors.Is(err, models.ErrNotFound){
+			utils.WriteResponse(w, http.StatusNotFound,models.MessageResponse{Message: "Post does not exist"})
+			return
+		}
+
 		p.Logger.Error("Failed to delete post from DB",zap.Error(err))
 
 		utils.WriteResponse(w, http.StatusInternalServerError,models.MessageResponse{Message: "Internal server error"})
