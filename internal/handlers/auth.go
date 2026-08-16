@@ -247,6 +247,7 @@ func (a *AuthHandler) Login(w http.ResponseWriter, r *http.Request){
 		Name: "access-token",
 		HttpOnly: true,
 		Domain: "localhost",
+		Path: "/",
 		Secure: true,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge: int(time.Until(accessTokenExpiresAt).Seconds()),
@@ -258,6 +259,7 @@ func (a *AuthHandler) Login(w http.ResponseWriter, r *http.Request){
 		Name: "refresh-token",
 		HttpOnly: true,
 		Domain: "localhost",
+		Path: "/",
 		Secure: true,
 		SameSite: http.SameSiteLaxMode,
 		Expires:refreshExpiresAt,
@@ -306,6 +308,7 @@ func (a *AuthHandler) Logout(w http.ResponseWriter, r *http.Request){
 		HttpOnly: true,
 		MaxAge:   -1,
 		Domain: "localhost",
+		Path: "/",
 		Expires:  time.Unix(0, 0),
 	})
 	http.SetCookie(w, &http.Cookie{
@@ -314,6 +317,7 @@ func (a *AuthHandler) Logout(w http.ResponseWriter, r *http.Request){
 		HttpOnly: true,
 		MaxAge:   -1,
 		Domain: "localhost",
+		Path: "/",
 		Expires:  time.Unix(0, 0),
 	})
 
@@ -436,6 +440,7 @@ func (a *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request){
 		Name: "access-token",
 		HttpOnly: true,
 		Domain: "localhost",
+		Path: "/",
 		Secure: true,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge: int(time.Until(accessTokenExpiresAt).Seconds()),
@@ -447,6 +452,7 @@ func (a *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request){
 		Name: "refresh-token",
 		HttpOnly: true,
 		Domain: "localhost",
+		Path: "/",
 		Secure: true,
 		SameSite: http.SameSiteLaxMode,
 		Expires:refreshExpiresAt,
@@ -641,6 +647,7 @@ func (a *AuthHandler) DeleteMe(w http.ResponseWriter, r *http.Request){
 		HttpOnly: true,
 		MaxAge:   -1,
 		Domain: "localhost",
+		Path: "/",
 		Expires:  time.Unix(0, 0),
 	})
 	
@@ -650,6 +657,7 @@ func (a *AuthHandler) DeleteMe(w http.ResponseWriter, r *http.Request){
 		HttpOnly: true,
 		MaxAge:   -1,
 		Domain: "localhost",
+		Path: "/",
 		Expires:  time.Unix(0, 0),
 	})
 
