@@ -26,3 +26,9 @@ type UserLogin struct {
     Password  string `json:"password" validate:"required"`
     Username  string `json:"username" validate:"required,min=3,max=10"`
 }
+
+
+type UserRequestCtx struct {
+	UserId string
+	Role string
+}

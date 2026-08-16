@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/shubomifashakin/go-social/internal/cache"
 	"github.com/shubomifashakin/go-social/internal/mailer"
+	"github.com/shubomifashakin/go-social/internal/middlewares"
 	"github.com/shubomifashakin/go-social/internal/models"
 	"github.com/shubomifashakin/go-social/internal/repository"
 	"github.com/shubomifashakin/go-social/internal/templates"
@@ -399,4 +400,78 @@ func (a *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request){
 
 	// return the response to the user, setting the cookies
 	utils.WriteResponse(w,http.StatusOK, models.MessageResponse{Message: "Success"})
+}
+
+func (a *AuthHandler) RequestDelete(w http.ResponseWriter, r * http.Request){
+	ctx,cancel:= context.WithTimeout(r.Context(),10*time.Second)
+	defer cancel()
+
+	// get the user context from the request
+	userCtxInfo:= r.Context().Value(middlewares.UserCtxKey).(models.UserRequestCtx)
+
+	// get the users info from the user
+	user,err:=repository.FindUserById(ctx,a.DB,userCtxInfo.UserId)
+	if err != nil {
+		a.Logger.Error("Failed to get user info",zap.Error(err))
+
+		utils.WriteResponse(w,http.StatusInternalServerError,models.MessageResponse{Message: "Internal Server Error"})
+		return
+	}
+
+	// generate an access code for the user
+	code:= utils.GenerateSixDigitCode()
+
+	// store the access code in the cache
+	err=a.Cache.SetJSON(ctx,fmt.Sprintf("user:%s:delete-request-code",user.ID),code,5*time.Minute)
+
+	if err != nil {
+		a.Logger.Error("Failed to set delete code in cache",zap.Error(err))
+
+		utils.WriteResponse(w,http.StatusInternalServerError,models.MessageResponse{Message: "Internal Server Error"})
+		return
+	}
+
+	var builder strings.Builder
+
+	// generate the html 
+	tmpl,err:=template.New("delete-request-mail").Parse(templates.DeleteRequestTemplate)
+	if err != nil {
+		a.Logger.Error("Failed to generate delete html",zap.Error(err))
+
+		utils.WriteResponse(w,http.StatusInternalServerError,models.MessageResponse{Message: "Internal Server Error"})
+		return
+	}
+
+	deleteInfo:=struct{
+		FirstName string
+		Code string
+	}{
+		FirstName: user.FirstName,
+		Code: code,
+	}
+
+	if err=tmpl.Execute(&builder,deleteInfo); err!=nil {
+		a.Logger.Error("Failed to execute delete html templates",zap.Error(err))
+
+		utils.WriteResponse(w,http.StatusInternalServerError,models.MessageResponse{Message: "Internal Server Error"})
+		return
+	}
+	
+	// send the mail to the user
+	_,err=a.Mailer.SendMail(mailer.Mail{
+		From: a.FromMail,
+		To: []string{user.Email},
+		Subject: "Delete Code",
+		Html: builder.String(),
+	})
+
+	if err != nil {
+		a.Logger.Error("Failed to send delete mail",zap.Error(err))
+
+		utils.WriteResponse(w,http.StatusInternalServerError,models.MessageResponse{Message: "Internal Server Error"})
+		return
+	}
+
+	// return a response to the user
+	utils.WriteResponse(w,http.StatusOK,models.MessageResponse{Message: "Success"})	
 }
