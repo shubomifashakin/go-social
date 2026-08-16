@@ -48,6 +48,23 @@ func (c *Cache) GetJSON(ctx context.Context, key string, dest any) error {
     return json.Unmarshal([]byte(raw), dest)
 }
 
+func (c *Cache) IsRateLimited(ctx context.Context, key string, limit int64, window time.Duration) (bool, time.Time, error) {
+    count, err := c.client.Incr(ctx, key).Result()
+    if err != nil {
+        return false, time.Time{}, err
+    }
+	
+    if count == 1 {
+        c.client.Expire(ctx, key, window)
+    }
+
+    ttl, err := c.client.TTL(ctx, key).Result()
+    if err != nil {
+        return count > limit, time.Time{}, err
+    }
+
+    return count > limit, time.Now().Add(ttl), nil
+}
 
 
 func NewRedisClient(ctx context.Context,url string, clientName string) (*Cache, error) {
