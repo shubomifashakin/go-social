@@ -655,3 +655,63 @@ func (a *AuthHandler) DeleteMe(w http.ResponseWriter, r *http.Request){
 
 	utils.WriteResponse(w,http.StatusOK,models.MessageResponse{Message: "Success"})
 }
+
+func (a *AuthHandler)GetMe(w http.ResponseWriter, r * http.Request){
+	ctx, cancel:= context.WithTimeout(r.Context(),time.Second*10)
+	defer cancel()
+
+	// get the users details from the request context
+	ctxUser,ok:= r.Context().Value(middlewares.UserCtxKey).(models.UserRequestCtx)
+	if !ok {
+		a.Logger.Debug("User is unauthorized")
+
+		utils.WriteResponse(w,http.StatusUnauthorized,models.MessageResponse{Message: "Unauthorized"})
+		return
+	}
+
+	// get the users details from the cache
+	cacheKey:=fmt.Sprintf("user:%s",ctxUser.UserId)
+	var user models.User
+
+	err:= a.Cache.GetJSON(ctx,cacheKey,&user)
+
+	// if the cache returned an error
+	if err != nil {	
+		// if it was just a cache miss
+		if errors.Is(err, redis.Nil){
+			a.Logger.Info("Cache Miss: User does not exist")
+		}else{
+		// if it was anything else
+			a.Logger.Info("Cache error", zap.Error(err))
+		}
+	} else{
+		// if the user was in the cache return that back to the user
+		a.Logger.Debug("Cache hit: User info returned from cache")
+		utils.WriteResponse(w,http.StatusOK,user)
+		return
+	}
+	
+	// if the user was not in the cache, get from the database
+	user,err= repository.FindUserById(ctx,a.DB,ctxUser.UserId)
+
+	if err != nil {
+		if errors.Is(err, models.ErrNotFound){
+			a.Logger.Debug("User does not exist",zap.Error(err))
+
+			utils.WriteResponse(w,http.StatusNotFound,models.MessageResponse{Message: "User does not exist"})
+			return
+		}
+
+		a.Logger.Error("Failed to get user info",zap.Error(err))
+		utils.WriteResponse(w,http.StatusInternalServerError,models.MessageResponse{Message: "Internal server error"})
+		return
+	}
+
+	err= a.Cache.SetJSON(ctx,cacheKey,user,time.Minute*5)
+	if err != nil {
+		a.Logger.Error("Failed to set user info in db",zap.Error(err))
+	}
+
+	// return the response back to the user
+	utils.WriteResponse(w,http.StatusOK,user)
+}
