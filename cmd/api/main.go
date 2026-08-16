@@ -107,7 +107,6 @@ func main() {
 	})
 	
 	server := &http.Server{
-		// TODO: apply middleware to mux
 		Handler: c.Handler(mux),
 		Addr: ":"+port,
 		WriteTimeout: 15*time.Second,

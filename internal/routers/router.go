@@ -6,6 +6,7 @@ import (
 
 	"github.com/shubomifashakin/go-social/internal/cache"
 	"github.com/shubomifashakin/go-social/internal/mailer"
+	"github.com/shubomifashakin/go-social/internal/middlewares"
 	"go.uber.org/zap"
 )
 
@@ -14,10 +15,12 @@ func RegisterRouter(db *sql.DB, redisInstance *cache.Cache, resend *mailer.Maile
 	
 	v1 := http.NewServeMux()
 
+	rLogger:= middlewares.RequestLogger{Logger: logger}
+
 	CreateAuthRouter(v1,db,redisInstance,resend,logger,fromMail)
 	CreatePostRouter(v1,db,redisInstance,logger)
 
-    mux.Handle("/api/v1/", http.StripPrefix("/api/v1", v1))
+    mux.Handle("/api/v1/", http.StripPrefix("/api/v1", rLogger.Check(v1)))
 	
 	return mux
 }
