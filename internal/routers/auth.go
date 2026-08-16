@@ -26,4 +26,5 @@ func CreateAuthRouter(m *http.ServeMux, db *sql.DB, cache *cache.Cache, mailer *
 	
 	m.Handle("POST /auth/logout", middlewares.IsAuthorized(http.HandlerFunc(authInstance.Logout)))
 	m.Handle("POST /auth/request-delete-account", middlewares.IsAuthorized(http.HandlerFunc(authInstance.RequestDelete)))
+	m.Handle("DELETE /auth/me", middlewares.IsAuthorized(http.HandlerFunc(authInstance.DeleteMe)))
 }

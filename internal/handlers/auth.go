@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"crypto/subtle"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -14,6 +15,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 	"github.com/shubomifashakin/go-social/internal/cache"
 	"github.com/shubomifashakin/go-social/internal/mailer"
 	"github.com/shubomifashakin/go-social/internal/middlewares"
@@ -461,7 +463,13 @@ func (a *AuthHandler) RequestDelete(w http.ResponseWriter, r * http.Request){
 	defer cancel()
 
 	// get the user context from the request
-	userCtxInfo:= r.Context().Value(middlewares.UserCtxKey).(models.UserRequestCtx)
+	userCtxInfo,ok:= r.Context().Value(middlewares.UserCtxKey).(models.UserRequestCtx)
+	if !ok {
+		a.Logger.Debug("User is unauthorized")
+
+		utils.WriteResponse(w,http.StatusUnauthorized,models.MessageResponse{Message: "Unauthorized"})
+		return
+	}
 
 	// get the users info from the user
 	user,err:=repository.FindUserById(ctx,a.DB,userCtxInfo.UserId)
@@ -475,8 +483,12 @@ func (a *AuthHandler) RequestDelete(w http.ResponseWriter, r * http.Request){
 	// generate an access code for the user
 	code:= utils.GenerateSixDigitCode()
 
+	deleteCodeInfo:= models.DeleteCode{
+		Code: code,
+	}
+
 	// store the access code in the cache
-	err=a.Cache.SetJSON(ctx,fmt.Sprintf("user:%s:delete-request-code",user.ID),code,5*time.Minute)
+	err=a.Cache.SetJSON(ctx,fmt.Sprintf("user:%s:delete-request-code",user.ID),deleteCodeInfo,5*time.Minute)
 
 	if err != nil {
 		a.Logger.Error("Failed to set delete code in cache",zap.Error(err))
@@ -528,4 +540,118 @@ func (a *AuthHandler) RequestDelete(w http.ResponseWriter, r * http.Request){
 
 	// return a response to the user
 	utils.WriteResponse(w,http.StatusOK,models.MessageResponse{Message: "Success"})	
+}
+
+func (a *AuthHandler) DeleteMe(w http.ResponseWriter, r *http.Request){
+	ctx,cancel:= context.WithTimeout(r.Context(),10*time.Second)
+	defer cancel()
+
+	// get the user context from the request
+	userCtxInfo,ok:= r.Context().Value(middlewares.UserCtxKey).(models.UserRequestCtx)
+	if !ok {
+		a.Logger.Debug("User is unauthorized")
+
+		utils.WriteResponse(w,http.StatusUnauthorized,models.MessageResponse{Message: "Unauthorized"})
+		return
+	}
+
+	// get the post body from the request body
+	var body models.DeleteCode
+
+	err:=json.NewDecoder(r.Body).Decode(&body)
+	if err !=nil {
+		a.Logger.Debug("Invalid post body",zap.Error(err))
+
+		utils.WriteResponse(w,http.StatusBadRequest,models.MessageResponse{Message: "Invalid payload"})
+		return
+	}
+
+	// validate the struct
+	err=utils.Validator.Struct(body)
+
+	if err != nil {
+		a.Logger.Debug("Invalid post body",zap.Error(err))
+
+		var validationErrors validator.ValidationErrors
+
+		if errors.As(err,&validationErrors){
+			fields := make(map[string]string)
+
+			for _, e := range validationErrors {
+				fields[e.Field()] = e.Tag() 
+			}
+			
+			utils.WriteResponse(w,http.StatusBadRequest,fields)
+			return
+		}
+
+		utils.WriteResponse(w,http.StatusBadRequest,models.MessageResponse{Message: "Invalid payload"})
+		return	
+	}
+
+	var deleteCode models.DeleteCode
+
+	// get the code from the cache
+	cacheDeleteKey:=fmt.Sprintf("user:%s:delete-request-code",userCtxInfo.UserId)
+	err=a.Cache.GetJSON(ctx,cacheDeleteKey,&deleteCode)
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			utils.WriteResponse(w, http.StatusUnauthorized, models.MessageResponse{Message: "Unauthorized"})
+		} else {
+			a.Logger.Error("Failed to get delete code from cache", zap.Error(err))
+
+			utils.WriteResponse(w, http.StatusInternalServerError, models.MessageResponse{Message: "Internal server error"})
+		}
+		return
+	}
+	
+	// if the codes dont match return unauthorized
+	if subtle.ConstantTimeCompare([]byte(body.Code),[]byte(deleteCode.Code)) != 1 {
+		a.Logger.Debug("Code does not match")
+
+		utils.WriteResponse(w,http.StatusUnauthorized,models.MessageResponse{Message: "Unauthorized"})
+		return	
+	}
+
+	err= repository.DeleteUserAccountById(ctx,a.DB,userCtxInfo.UserId)
+
+	if err != nil {
+		switch {
+			case (errors.Is(err,models.ErrNotFound)) :
+				a.Logger.Error("User does not exist",zap.Error(err))
+
+				utils.WriteResponse(w,http.StatusNotFound,models.MessageResponse{Message: "Account does not exist"})
+				return	
+			default:
+				a.Logger.Error("Error deleting the account from db",zap.Error(err))
+
+				utils.WriteResponse(w,http.StatusInternalServerError,models.MessageResponse{Message: "Internal server error"})
+				return			
+		}
+	}
+	
+	err= a.Cache.Delete(ctx,cacheDeleteKey)
+	if err != nil {
+		a.Logger.Warn(fmt.Sprintf("Couldnt delete %s from cache",cacheDeleteKey),zap.Error(err))
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access-token",
+		Value:    "",
+		HttpOnly: true,
+		MaxAge:   -1,
+		Domain: "localhost",
+		Expires:  time.Unix(0, 0),
+	})
+	
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh-token",
+		Value:    "",
+		HttpOnly: true,
+		MaxAge:   -1,
+		Domain: "localhost",
+		Expires:  time.Unix(0, 0),
+	})
+
+	utils.WriteResponse(w,http.StatusOK,models.MessageResponse{Message: "Success"})
 }

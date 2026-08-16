@@ -32,3 +32,7 @@ type UserRequestCtx struct {
 	UserId string
 	Role string
 }
+
+type DeleteCode struct{
+	Code string `json:"code" validate:"required"`
+}

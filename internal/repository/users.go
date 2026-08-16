@@ -34,6 +34,23 @@ func CreateUser(ctx context.Context, db *sql.DB, user models.UserSignup) (string
 	return id,nil
 }
 
+func DeleteUserAccountById(ctx context.Context, db *sql.DB, id string) error {
+	query:= `DELETE FROM users WHERE id = $1`
+
+	res,err:= db.ExecContext(ctx,query,id)
+
+	if err != nil {
+		return err
+	}
+	
+	rows,err:= res.RowsAffected()
+	if rows < 1 {
+		return models.ErrNotFound
+	}
+
+	return nil
+}
+
 func FindUserByUsername(ctx context.Context, db *sql.DB, username string) (models.User, error) {
 	query:=`SELECT id, first_name, last_name, username, password, role, email FROM users WHERE username = $1`
 	var user models.User
