@@ -9,8 +9,14 @@ import (
 	"go.uber.org/zap"
 )
 
-func RegisterRouter(db *sql.DB, redisInstance *cache.Cache, resend *mailer.Mailer, logger *zap.Logger) *http.ServeMux {
+func RegisterRouter(db *sql.DB, redisInstance *cache.Cache, resend *mailer.Mailer, logger *zap.Logger,fromMail string) *http.ServeMux {
 	mux := http.NewServeMux()
+	
+	v1 := http.NewServeMux()
 
+	CreateAuthRouter(v1,db,redisInstance,resend,logger,fromMail)
+
+    mux.Handle("/api/v1/", http.StripPrefix("/api/v1", v1))
+	
 	return mux
 }

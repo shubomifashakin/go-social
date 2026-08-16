@@ -71,6 +71,11 @@ func main() {
 		logger.Fatal("REDIS is not configured")
 	}
 
+	fromMail:= os.Getenv("MAILER_FROM")
+	if fromMail == ""{
+		logger.Fatal("MAILER_FROM not set")
+	}
+
 	ctx,cancel:= context.WithTimeout(context.Background(),time.Second*30)
 	defer cancel()
 
@@ -91,7 +96,7 @@ func main() {
 	// create the instance of the mailer
 	resendInstance:= mailer.NewMailer(resendApiKey)
 
-	mux := routers.RegisterRouter(db, redisInstance, resendInstance, logger)
+	mux := routers.RegisterRouter(db, redisInstance, resendInstance, logger, fromMail)
 
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"http://localhost:3001"},
