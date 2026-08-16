@@ -18,9 +18,11 @@ import (
 	"github.com/shubomifashakin/go-social/internal/mailer"
 	"github.com/shubomifashakin/go-social/internal/models"
 	"github.com/shubomifashakin/go-social/internal/repository"
+	"github.com/shubomifashakin/go-social/internal/templates"
 	"github.com/shubomifashakin/go-social/pkg/utils"
 	"go.uber.org/zap"
 )
+
 
 type AuthHandler struct {
 	DB *sql.DB
@@ -95,19 +97,19 @@ func (a *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request){
 		return
 	}
 	
-	// FIXME: EXTRACT THIS SOMEWHERE ELSE
 	var builder strings.Builder
 
-	const welcomeTemplate = `
-	<h1>Welcome to GO-Social, {{.FirstName}}!</h1>
-	<p>Your account has been created successfully.</p>
-	`
-	tmpl := template.Must(template.New("welcome-mail").Parse(welcomeTemplate))
-	err = tmpl.Execute(&builder, body)
-
+	tmpl, err := template.New("welcome-mail").Parse(templates.WelcomeTemplate)
 	if err != nil {
-		a.Logger.Error("Failed to generate welcome mail",zap.Error(err))
-	}else {
+		a.Logger.Error("Failed to parse welcome template", zap.Error(err))
+	} else {
+		err = tmpl.Execute(&builder, body)
+		if err != nil {
+			a.Logger.Error("Failed to build welcome email template", zap.Error(err))
+		}
+	}
+
+	if err == nil {
 		_,err=a.Mailer.SendMail(mailer.Mail{
 			From:a.FromMail ,
 			To: []string{body.Email},
