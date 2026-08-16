@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
 
 	"github.com/shubomifashakin/go-social/internal/models"
 )
@@ -54,4 +55,70 @@ func GetPostById(ctx context.Context, db *sql.DB, postId string) (models.Post, e
 	}
 
 	return post,nil
+}
+
+func GetPaginatedPostsForUser(ctx context.Context, db *sql.DB, userId string, limit int, cursor string) ([]models.Post, error){
+	posts:=[]models.Post{}
+	limit=limit+1
+
+	if cursor != "" {
+		var createdAt time.Time
+		createdAtOfLastPost:= `SELECT created_at FROM posts WHERE id = $1 AND user_id= $2`
+		err:=db.QueryRowContext(ctx,createdAtOfLastPost,cursor, userId).Scan(&createdAt)
+		if err != nil {
+			if errors.Is(err,sql.ErrNoRows){
+				return posts,models.ErrNotFound
+			}
+		}
+
+		query:= `SELECT id, user_id, content, created_at, updated_at FROM posts WHERE user_id = $1 AND created_at < $2 ORDER BY created_at DESC LIMIT $3`
+
+		rows,err:=db.QueryContext(ctx,query,userId,createdAt,limit)	
+
+		if err != nil {
+			return posts,err
+		}
+		defer rows.Close()
+		
+		for rows.Next() {
+			post:= models.Post{}
+			err:=rows.Scan(&post.ID, &post.UserID, &post.Content, &post.CreatedAt, &post.UpdatedAt)
+			if err != nil {
+				return posts,err
+			}
+	
+			posts=append(posts, post)
+		}
+	
+		if rows.Err() != nil{
+			return posts,rows.Err()
+		}
+
+		return posts,nil
+	}
+
+	// if theres no cursor
+	query:= `SELECT id, user_id, content, created_at, updated_at FROM posts WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2`
+
+	rows,err:=db.QueryContext(ctx,query,userId,limit)
+	if err != nil {
+		return posts,err
+	}
+	defer rows.Close()
+	
+	for rows.Next() {
+		post:= models.Post{}
+		err:=rows.Scan(&post.ID, &post.UserID, &post.Content, &post.CreatedAt, &post.UpdatedAt)
+		if err != nil {
+			return posts,err
+		}
+
+		posts=append(posts, post)
+	}
+
+	if rows.Err() != nil{
+		return posts,rows.Err()
+	}
+
+	return posts,nil
 }

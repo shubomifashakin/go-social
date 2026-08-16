@@ -20,6 +20,7 @@ func CreatePostRouter(m *http.ServeMux, db *sql.DB, cache *cache.Cache, logger *
 	isAuthorizedMware:=middlewares.IsAuthorized{Logger: logger}
 
 	m.Handle("POST /posts", isAuthorizedMware.Check(http.HandlerFunc(postsInstance.CreatePost)))
+	m.Handle("GET /posts", isAuthorizedMware.Check(http.HandlerFunc(postsInstance.GetPosts)))
 	m.Handle("DELETE /posts/{id}", isAuthorizedMware.Check(http.HandlerFunc(postsInstance.DeletePost)))
 	m.Handle("GET /posts/{id}", isAuthorizedMware.Check(http.HandlerFunc(postsInstance.GetPost)))
 }

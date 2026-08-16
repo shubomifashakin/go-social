@@ -180,6 +180,48 @@ func (p *PostsHandler) GetPost(w http.ResponseWriter, r *http.Request){
 	utils.WriteResponse(w,http.StatusOK,models.MessageResponse{Message: "Success"})
 }
 
+func (p *PostsHandler) GetPosts(w http.ResponseWriter, r *http.Request) {
+	ctx,cancel:=context.WithTimeout(r.Context(),10*time.Second)
+	defer cancel()
+
+	// get the users id from the request context
+	user,ok:= r.Context().Value(middlewares.UserCtxKey).(models.UserRequestCtx)
+	if !ok {
+		utils.WriteResponse(w, http.StatusUnauthorized,models.MessageResponse{Message: "Unauthorized"})
+		return
+	}
+
+	cursor:= r.URL.Query().Get("cursor")
+
+	limit:=10
+	posts,err:=repository.GetPaginatedPostsForUser(ctx,p.DB,user.UserId,limit,cursor)
+	if err != nil {
+		p.Logger.Error("Failed to get posts",zap.Error(err))
+
+		utils.WriteResponse(w,http.StatusInternalServerError,models.MessageResponse{Message: "Internal server error"})
+		return
+	}
+
+	var response models.PaginatedResponse[models.Post]
+
+	if len(posts) > limit {
+		response= models.PaginatedResponse[models.Post]{
+			HasNextPage: len(posts) > limit,
+			Data:         posts[:limit],
+			Next:       posts[limit].ID,
+		}	
+	}else{
+		response= models.PaginatedResponse[models.Post]{
+			HasNextPage: false,
+			Data:         posts,
+			Next:       "",
+		}	
+	}
+
+	// return the posts to the user
+	utils.WriteResponse(w,http.StatusOK,response)
+}
+
 
 func makePostCacheKey(postId string) string{
 	return fmt.Sprintf("post:%s",postId)
