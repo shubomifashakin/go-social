@@ -15,6 +15,7 @@ func RegisterRouter(db *sql.DB, redisInstance *cache.Cache, resend *mailer.Maile
 	v1 := http.NewServeMux()
 
 	CreateAuthRouter(v1,db,redisInstance,resend,logger,fromMail)
+	CreatePostRouter(v1,db,redisInstance,logger)
 
     mux.Handle("/api/v1/", http.StripPrefix("/api/v1", v1))
 	

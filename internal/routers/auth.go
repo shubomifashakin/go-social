@@ -19,13 +19,15 @@ func CreateAuthRouter(m *http.ServeMux, db *sql.DB, cache *cache.Cache, mailer *
 		Logger: logger,
 		FromMail: fromMail,
 	}
-
+	
+	isAuthorizedMware:=middlewares.IsAuthorized{Logger: logger}
+	
 	m.HandleFunc("POST /auth/sign-up",authInstance.SignUp)
 	m.HandleFunc("POST /auth/login",authInstance.Login)
 	m.HandleFunc("POST /auth/refresh",authInstance.Refresh)
 	
-	m.Handle("POST /auth/logout", middlewares.IsAuthorized(http.HandlerFunc(authInstance.Logout)))
-	m.Handle("POST /auth/request-delete-account", middlewares.IsAuthorized(http.HandlerFunc(authInstance.RequestDelete)))
-	m.Handle("DELETE /auth/me", middlewares.IsAuthorized(http.HandlerFunc(authInstance.DeleteMe)))
-	m.Handle("GET /auth/me", middlewares.IsAuthorized(http.HandlerFunc(authInstance.GetMe)))
+	m.Handle("POST /auth/logout", isAuthorizedMware.Check(http.HandlerFunc(authInstance.Logout)))
+	m.Handle("POST /auth/request-delete-account", isAuthorizedMware.Check(http.HandlerFunc(authInstance.RequestDelete)))
+	m.Handle("DELETE /auth/me", isAuthorizedMware.Check(http.HandlerFunc(authInstance.DeleteMe)))
+	m.Handle("GET /auth/me", isAuthorizedMware.Check(http.HandlerFunc(authInstance.GetMe)))
 }
