@@ -13,7 +13,7 @@ import (
 )
 
 type RateLimiter struct {
-	Store *cache.Cache
+	Store cache.CacheService
 	Logger *zap.Logger
 }
 

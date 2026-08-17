@@ -1,27 +1,32 @@
 package mailer
 
-import "github.com/resend/resend-go/v3"
+import (
+	"github.com/resend/resend-go/v3"
+)
 
 type Mailer struct {
 	client *resend.Client
 }
 
-type Mail struct {
-	From string
-	To []string
-	Subject string
-	Html string
-	Attachments []*resend.Attachment
-	Cc []string
-}
-
 func (m *Mailer)SendMail(body Mail)(string,error) {
+	attachments:= []*resend.Attachment{}
+
+	for _,v:=range body.Attachments {
+		attachments=append(attachments, &resend.Attachment{
+			Content: v.Content,
+			Filename: v.FileName,
+			ContentType: v.ContentType,
+			Path: "",
+			ContentId: "",
+		})
+	}
+
 	res,err:=m.client.Emails.Send(&resend.SendEmailRequest{
 		From: body.From,
 		To: body.To,
 		Subject: body.Subject,
 		Html: body.Html,
-		Attachments: body.Attachments,
+		Attachments: attachments,
 		Cc:body.Cc ,
 	})
 	

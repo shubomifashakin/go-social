@@ -14,10 +14,10 @@ import (
 	"go.uber.org/zap"
 )
 
-func CreateAuthRouter(m *http.ServeMux, usersRepo handlers.UsersRepo, cache *cache.Cache, mailer *mailer.Mailer, logger *zap.Logger, fromMail string) {
+func CreateAuthRouter(m *http.ServeMux, usersRepo handlers.UsersRepo, cache cache.CacheService, mailerService mailer.MailerService, logger *zap.Logger, fromMail string) {
 	authInstance:=&handlers.AuthHandler{	
 		Cache: cache,
-		Mailer: mailer,
+		Mailer: mailerService,
 		Logger: logger,
 		FromMail: fromMail,
 		UsersRepo: usersRepo,

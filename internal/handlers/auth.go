@@ -24,21 +24,10 @@ import (
 	"go.uber.org/zap"
 )
 
-type UsersRepo interface {
-	CreateUser(ctx context.Context, user models.UserSignup) (string, error)
-	DeleteUserAccountById(ctx context.Context, id string) error
-	FindUserByUsername(ctx context.Context, username string) (models.User, error)
-	FindUserById(ctx context.Context, userId string) (models.User, error)
-	CreateRefreshToken(ctx context.Context, userId string, tokenId string, expiresAt time.Time) error
-	FindRefreshTokenByTokenId(ctx context.Context, tokenId string) (models.RefreshToken, error)
-	RotateRefreshToken(ctx context.Context, userId string, oldTokenId string, newTokenId string, expiresAt time.Time) error
-	DeleteRefreshTokenByTokenId(ctx context.Context, tokenId string) error
-}
-
 type AuthHandler struct {
 	UsersRepo UsersRepo
-	Cache *cache.Cache
-	Mailer *mailer.Mailer
+	Cache cache.CacheService
+	Mailer mailer.MailerService
 	Logger *zap.Logger
 	FromMail string
 }

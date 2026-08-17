@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func CreatePostRouter(m *http.ServeMux, postsRepo handlers.PostsRepo, cache *cache.Cache, logger *zap.Logger) {
+func CreatePostRouter(m *http.ServeMux, postsRepo handlers.PostsRepo, cache cache.CacheService, logger *zap.Logger) {
 	postsInstance:=&handlers.PostsHandler{	
 		Cache: cache,
 		Logger: logger,

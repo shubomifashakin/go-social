@@ -17,16 +17,9 @@ import (
 	"go.uber.org/zap"
 )
 
-type PostsRepo interface {
-	CreatePost(ctx context.Context, userId string, post models.CreatePost) (string, error)
-	DeletePostById(ctx context.Context, postId string, userId string) error
-	GetPostById(ctx context.Context, postId string) (models.Post, error)
-	GetPaginatedPostsForUser(ctx context.Context, userId string, limit int, cursor string) ([]models.Post, error)
-}
-
 type PostsHandler struct {
 	PostsRepo PostsRepo
-	Cache    *cache.Cache
+	Cache    cache.CacheService
 	Logger   *zap.Logger
 }
 

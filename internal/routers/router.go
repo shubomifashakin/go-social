@@ -13,15 +13,15 @@ import (
 	_ "github.com/shubomifashakin/go-social/docs"
 )
 
-func RegisterRouter(environment string, usersRepo handlers.UsersRepo, postsRepo handlers.PostsRepo, redisInstance *cache.Cache, resend *mailer.Mailer, logger *zap.Logger, fromMail string) *http.ServeMux {
+func RegisterRouter(environment string, usersRepo handlers.UsersRepo, postsRepo handlers.PostsRepo, cacheService cache.CacheService, mailerService mailer.MailerService, logger *zap.Logger, fromMail string) *http.ServeMux {
 	mux := http.NewServeMux()
 	
 	v1 := http.NewServeMux()
 
 	rLogger:= middlewares.RequestLogger{Logger: logger}
 	
-	CreateAuthRouter(v1,usersRepo,redisInstance,resend,logger,fromMail)
-	CreatePostRouter(v1,postsRepo,redisInstance,logger)
+	CreateAuthRouter(v1,usersRepo,cacheService,mailerService,logger,fromMail)
+	CreatePostRouter(v1,postsRepo,cacheService,logger)
 
     mux.Handle("/api/v1/", http.StripPrefix("/api/v1", rLogger.Check(v1)))
 
