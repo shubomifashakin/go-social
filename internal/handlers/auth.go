@@ -35,6 +35,17 @@ type AuthHandler struct {
 	FromMail string
 }
 
+// @Summary      Create a an account
+// @Description  This creates the account
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body body models.UserSignup true "User details"
+// @Success      201  {object}  models.MessageResponse
+// @Failure      400  {object}  models.MessageResponse
+// @Failure      401  {object}  models.MessageResponse
+// @Failure      500  {object}  models.MessageResponse
+// @Router       /auth/sign-up [post]
 func (a *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request){
 	ctx,cancel:= context.WithTimeout(r.Context(),10*time.Second)
 	defer cancel()
@@ -130,6 +141,17 @@ func (a *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request){
 	})
 }
 
+// @Summary      Sign in
+// @Description  Logs in the specified user
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body body models.UserLogin true "User details"
+// @Success      200  {object}  models.MessageResponse
+// @Failure      400  {object}  models.MessageResponse
+// @Failure      401  {object}  models.MessageResponse
+// @Failure      500  {object}  models.MessageResponse
+// @Router       /auth/login [post]
 func (a *AuthHandler) Login(w http.ResponseWriter, r *http.Request){
 	ctx,cancel:= context.WithTimeout(r.Context(),10*time.Second)
 	defer cancel()
@@ -270,6 +292,18 @@ func (a *AuthHandler) Login(w http.ResponseWriter, r *http.Request){
 	utils.WriteResponse(w,http.StatusOK,models.MessageResponse{Message: "Success"})
 }
 
+// @Summary      Log Out
+// @Description  Logs out the user
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  models.MessageResponse
+// @Failure      400  {object}  models.MessageResponse
+// @Failure      401  {object}  models.MessageResponse
+// @Failure      500  {object}  models.MessageResponse
+// @Security     cookieAuth
+// @Security     refreshCookieAuth
+// @Router       /auth/logout [post]
 func (a *AuthHandler) Logout(w http.ResponseWriter, r *http.Request){
 	ctx,cancel:= context.WithTimeout(r.Context(),10*time.Second)
 	defer cancel()
@@ -326,6 +360,17 @@ func (a *AuthHandler) Logout(w http.ResponseWriter, r *http.Request){
 	})
 }
 
+// @Summary      Refresh token
+// @Description  Refreshes the users session
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  models.MessageResponse
+// @Failure      400  {object}  models.MessageResponse
+// @Failure      401  {object}  models.MessageResponse
+// @Failure      500  {object}  models.MessageResponse
+// @Security     refreshCookieAuth
+// @Router       /auth/refresh [post]
 func (a *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request){
 	ctx,cancel:= context.WithTimeout(r.Context(),10*time.Second)
 	defer cancel()
@@ -464,6 +509,17 @@ func (a *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request){
 	utils.WriteResponse(w,http.StatusOK, models.MessageResponse{Message: "Success"})
 }
 
+// @Summary      Request Delete Code
+// @Description  Requests a delete code so the user can delete their account
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  models.MessageResponse
+// @Failure      400  {object}  models.MessageResponse
+// @Failure      401  {object}  models.MessageResponse
+// @Failure      500  {object}  models.MessageResponse
+// @Security     cookieAuth
+// @Router       /auth/request-delete-account [post]
 func (a *AuthHandler) RequestDelete(w http.ResponseWriter, r * http.Request){
 	ctx,cancel:= context.WithTimeout(r.Context(),10*time.Second)
 	defer cancel()
@@ -548,6 +604,18 @@ func (a *AuthHandler) RequestDelete(w http.ResponseWriter, r * http.Request){
 	utils.WriteResponse(w,http.StatusOK,models.MessageResponse{Message: "Success"})	
 }
 
+// @Summary      Delete the logged in users account
+// @Description  Deletes the logged in users account
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body models.DeleteCode  true  "The code received"
+// @Success      200  {object}  models.MessageResponse
+// @Failure      400  {object}  models.MessageResponse
+// @Failure      401  {object}  models.MessageResponse
+// @Failure      500  {object}  models.MessageResponse
+// @Security     cookieAuth
+// @Router       /auth/me [delete]
 func (a *AuthHandler) DeleteMe(w http.ResponseWriter, r *http.Request){
 	ctx,cancel:= context.WithTimeout(r.Context(),10*time.Second)
 	defer cancel()
@@ -664,6 +732,17 @@ func (a *AuthHandler) DeleteMe(w http.ResponseWriter, r *http.Request){
 	utils.WriteResponse(w,http.StatusOK,models.MessageResponse{Message: "Success"})
 }
 
+// @Summary      Get the logged in users details
+// @Description  Get the logged in users account details
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  models.User
+// @Failure      400  {object}  models.MessageResponse
+// @Failure      401  {object}  models.MessageResponse
+// @Failure      500  {object}  models.MessageResponse
+// @Security cookieAuth
+// @Router       /auth/me [get]
 func (a *AuthHandler)GetMe(w http.ResponseWriter, r * http.Request){
 	ctx, cancel:= context.WithTimeout(r.Context(),time.Second*10)
 	defer cancel()

@@ -25,6 +25,20 @@ type PostsHandler struct {
 	Logger   *zap.Logger
 }
 
+type PaginatedPostResponse = models.PaginatedResponse[models.Post]
+
+// @Summary      Create a post
+// @Description  This creates a new post for the user
+// @Tags         posts
+// @Accept       json
+// @Produce      json
+// @Param        body body models.CreatePost true "Post body"
+// @Success      201  {object}  models.MessageResponse
+// @Failure      400  {object}  models.MessageResponse
+// @Failure      401  {object}  models.MessageResponse
+// @Failure      500  {object}  models.MessageResponse
+// @Security     cookieAuth
+// @Router       /posts [post]
 func (p *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request){
 	ctx,cancel:= context.WithTimeout(r.Context(),10*time.Second)
 	defer cancel()
@@ -82,6 +96,18 @@ func (p *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request){
 	utils.WriteResponse(w, http.StatusCreated,models.MessageResponse{Message: "Success"})
 }
 
+// @Summary      Delete a post
+// @Description  This deletes the specified post for the user
+// @Tags         posts
+// @Accept       json
+// @Produce      json
+// @Param 		 id   path string true  "The post id"
+// @Success      200  {object}  models.MessageResponse
+// @Failure      400  {object}  models.MessageResponse
+// @Failure      401  {object}  models.MessageResponse
+// @Failure      500  {object}  models.MessageResponse
+// @Security     cookieAuth
+// @Router       /posts/{id} [delete]
 func (p *PostsHandler) DeletePost(w http.ResponseWriter, r *http.Request){
 	ctx, cancel:= context.WithTimeout(r.Context(),10 *time.Second)
 	defer cancel()
@@ -129,6 +155,19 @@ func (p *PostsHandler) DeletePost(w http.ResponseWriter, r *http.Request){
 	utils.WriteResponse(w,http.StatusOK,models.MessageResponse{Message: "Success"})
 }
 
+// @Summary      Get a post
+// @Description  This retrieves the specified post
+// @Tags         posts
+// @Accept       json
+// @Produce      json
+// @Param 		 id   path string true  "The post id"
+// @Success      200  {object}  models.Post
+// @Failure      400  {object}  models.MessageResponse
+// @Failure      401  {object}  models.MessageResponse
+// @Failure      404  {object}  models.MessageResponse
+// @Failure      500  {object}  models.MessageResponse
+// @Security     cookieAuth
+// @Router       /posts/{id} [get]
 func (p *PostsHandler) GetPost(w http.ResponseWriter, r *http.Request){
 	ctx, cancel:= context.WithTimeout(r.Context(),10 *time.Second)
 	defer cancel()
@@ -177,9 +216,21 @@ func (p *PostsHandler) GetPost(w http.ResponseWriter, r *http.Request){
 	}
 
 	// return the response
-	utils.WriteResponse(w,http.StatusOK,models.MessageResponse{Message: "Success"})
+	utils.WriteResponse(w,http.StatusOK,post)
 }
 
+// @Summary      Get a list of posts for the logged in user
+// @Description  This retrieves a list of posts for the logged in user
+// @Tags         posts
+// @Accept       json
+// @Produce      json
+// @Param        cursor  query  string false "The cursor to continue the search from"   
+// @Success      200  {object}  PaginatedPostResponse
+// @Failure      400  {object}  models.MessageResponse
+// @Failure      401  {object}  models.MessageResponse
+// @Failure      500  {object}  models.MessageResponse
+// @Security     cookieAuth
+// @Router       /posts [get]
 func (p *PostsHandler) GetPosts(w http.ResponseWriter, r *http.Request) {
 	ctx,cancel:=context.WithTimeout(r.Context(),10*time.Second)
 	defer cancel()
@@ -222,6 +273,19 @@ func (p *PostsHandler) GetPosts(w http.ResponseWriter, r *http.Request) {
 	utils.WriteResponse(w,http.StatusOK,response)
 }
 
+// @Summary      Get list of posts for a specific user
+// @Description  This retrieves a list of posts for the specified user
+// @Tags         posts
+// @Accept       json
+// @Produce      json
+// @Param        id   path  string  true  "The user id"
+// @Param        cursor  query  string false  "The cursor to continue the search from"   
+// @Success      200  {object}  PaginatedPostResponse
+// @Failure      400  {object}  models.MessageResponse
+// @Failure      401  {object}  models.MessageResponse
+// @Failure      500  {object}  models.MessageResponse
+// @Security     cookieAuth
+// @Router       /users/{id}/posts [get]
 func (p *PostsHandler)GetPostsForUser(w http.ResponseWriter, r *http.Request){
 	ctx, cancel:= context.WithTimeout(r.Context(),10*time.Second)
 	defer cancel()

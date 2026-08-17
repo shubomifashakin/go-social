@@ -20,6 +20,16 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+// @title           go-social API
+// @version         1.0
+// @description     Social media API
+// @BasePath        /api/v1
+// @securityDefinitions.apikey cookieAuth
+// @in cookie
+// @name access_token
+// @securityDefinitions.apikey refreshCookieAuth
+// @in cookie
+// @name refresh_token
 func main() {
 	serviceName := "go-social"
 
@@ -96,7 +106,7 @@ func main() {
 	// create the instance of the mailer
 	resendInstance:= mailer.NewMailer(resendApiKey)
 
-	mux := routers.RegisterRouter(db, redisInstance, resendInstance, logger, fromMail)
+	mux := routers.RegisterRouter(environment, db, redisInstance, resendInstance, logger, fromMail)
 
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"http://localhost:3001"},
