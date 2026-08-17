@@ -18,7 +18,7 @@ services:
     restart: unless-stopped
 
   go-social:
-    image: go-social:local
+    build: .
     depends_on:
       - postgres
       - redis
