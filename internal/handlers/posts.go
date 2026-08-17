@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,7 +19,7 @@ import (
 )
 
 type PostsHandler struct {
-	DB       *sql.DB
+	PostsRepo *repository.PostsRepository
 	Cache    *cache.Cache
 	Logger   *zap.Logger
 }
@@ -84,7 +83,7 @@ func (p *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request){
 		return
 	}
 
-	_,err:= repository.CreatePost(ctx,p.DB,user.UserId,body)
+	_,err:= p.PostsRepo.CreatePost(ctx,user.UserId,body)
 	if err != nil {
 		p.Logger.Error("Failed to create post in db",zap.Error(err))
 
@@ -131,7 +130,7 @@ func (p *PostsHandler) DeletePost(w http.ResponseWriter, r *http.Request){
 	}
 
 	// delete the post from the database
-	err:= repository.DeletePostById(ctx,p.DB,postId, userInfo.UserId)
+	err:= p.PostsRepo.DeletePostById(ctx,postId, userInfo.UserId)
 	if err != nil {
 		if errors.Is(err, models.ErrNotFound){
 			utils.WriteResponse(w, http.StatusNotFound,models.MessageResponse{Message: "Post does not exist"})
@@ -200,7 +199,7 @@ func (p *PostsHandler) GetPost(w http.ResponseWriter, r *http.Request){
 	}
 
 	// get the post from the database
-	post,err= repository.GetPostById(ctx,p.DB,postId)
+	post,err= p.PostsRepo.GetPostById(ctx,postId)
 	if err != nil {
 		p.Logger.Error("Failed to get post from DB",zap.Error(err))
 
@@ -245,7 +244,7 @@ func (p *PostsHandler) GetPosts(w http.ResponseWriter, r *http.Request) {
 	cursor:= r.URL.Query().Get("cursor")
 
 	limit:=10
-	posts,err:=repository.GetPaginatedPostsForUser(ctx,p.DB,user.UserId,limit,cursor)
+	posts,err:=p.PostsRepo.GetPaginatedPostsForUser(ctx,user.UserId,limit,cursor)
 	if err != nil {
 		p.Logger.Error("Failed to get posts",zap.Error(err))
 
@@ -302,7 +301,7 @@ func (p *PostsHandler)GetPostsForUser(w http.ResponseWriter, r *http.Request){
 	cursor:= r.URL.Query().Get("cursor")
 
 	limit:=10
-	posts,err:=repository.GetPaginatedPostsForUser(ctx,p.DB,userId,limit,cursor)
+	posts,err:=p.PostsRepo.GetPaginatedPostsForUser(ctx,userId,limit,cursor)
 	if err != nil {
 		p.Logger.Error("Failed to get posts",zap.Error(err))
 

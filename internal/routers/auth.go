@@ -1,7 +1,6 @@
 package routers
 
 import (
-	"database/sql"
 	"net"
 	"net/http"
 	"strings"
@@ -12,16 +11,17 @@ import (
 	"github.com/shubomifashakin/go-social/internal/mailer"
 	"github.com/shubomifashakin/go-social/internal/middlewares"
 	"github.com/shubomifashakin/go-social/internal/models"
+	"github.com/shubomifashakin/go-social/internal/repository"
 	"go.uber.org/zap"
 )
 
-func CreateAuthRouter(m *http.ServeMux, db *sql.DB, cache *cache.Cache, mailer *mailer.Mailer, logger *zap.Logger, fromMail string) {
+func CreateAuthRouter(m *http.ServeMux, usersRepo *repository.UsersRepository, cache *cache.Cache, mailer *mailer.Mailer, logger *zap.Logger, fromMail string) {
 	authInstance:=&handlers.AuthHandler{	
-		DB: db,
 		Cache: cache,
 		Mailer: mailer,
 		Logger: logger,
 		FromMail: fromMail,
+		UsersRepo: usersRepo,
 	}
 	
 	isAuthorizedMware:=middlewares.IsAuthorized{Logger: logger}

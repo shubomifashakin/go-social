@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"crypto/subtle"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,7 +27,7 @@ import (
 
 
 type AuthHandler struct {
-	DB *sql.DB
+	UsersRepo *repository.UsersRepository
 	Cache *cache.Cache
 	Mailer *mailer.Mailer
 	Logger *zap.Logger
@@ -88,7 +87,7 @@ func (a *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request){
 
 	body.Password=hash
 
-	_,err= repository.CreateUser(ctx,a.DB,body)
+	_,err= a.UsersRepo.CreateUser(ctx,body)
 	
 	if err != nil {
 		switch {
@@ -186,7 +185,7 @@ func (a *AuthHandler) Login(w http.ResponseWriter, r *http.Request){
 	}
 
 	// find the user with the username and if they dont exist, return not found
-	user,err:= repository.FindUserByUsername(ctx,a.DB,body.Username)
+	user,err:= a.UsersRepo.FindUserByUsername(ctx,body.Username)
 	if err != nil {
 		switch err {
 			case models.ErrNotFound:
@@ -255,7 +254,7 @@ func (a *AuthHandler) Login(w http.ResponseWriter, r *http.Request){
 	}
 
 	// create the refresh token in the db
-	err=repository.CreateRefreshToken(ctx,a.DB,user.ID,refreshTokenId,refreshExpiresAt)
+	err=a.UsersRepo.CreateRefreshToken(ctx,user.ID,refreshTokenId,refreshExpiresAt)
 
 	if err !=nil {
 		a.Logger.Error("Failed to store refresh token in db",zap.Error(err))
@@ -327,7 +326,7 @@ func (a *AuthHandler) Logout(w http.ResponseWriter, r *http.Request){
 	}
 	
 	// delete the refresh token with that id from the db
-	err= repository.DeleteRefreshTokenByTokenId(ctx,a.DB,claims.ID)
+	err= a.UsersRepo.DeleteRefreshTokenByTokenId(ctx,claims.ID)
 	if err != nil {
 		a.Logger.Error("Failed to delete refresh token",zap.Error(err))
 
@@ -399,7 +398,7 @@ func (a *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request){
 	tokenId:= verifiedToken.ID
 
 	// get the refresh token from the db and check if it has expired
-	oldRefreshToken,err:= repository.FindRefreshTokenByTokenId(ctx,a.DB,tokenId)
+	oldRefreshToken,err:= a.UsersRepo.FindRefreshTokenByTokenId(ctx,tokenId)
 
 	if err != nil {
 		switch {
@@ -421,7 +420,7 @@ func (a *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request){
 	}
 
 	// get the users info from the db
-	user,err:= repository.FindUserById(ctx,a.DB,oldRefreshToken.UserID)
+	user,err:= a.UsersRepo.FindUserById(ctx,oldRefreshToken.UserID)
 
 	if err != nil {
 		a.Logger.Error("Failed to get user info",zap.Error(err))
@@ -471,7 +470,7 @@ func (a *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request){
 	}
 
 	// rotate the refresh token
-	err=repository.RotateRefreshToken(ctx,a.DB,user.ID,oldRefreshToken.TokenID,refreshTokenId,refreshExpiresAt)
+	err=a.UsersRepo.RotateRefreshToken(ctx,user.ID,oldRefreshToken.TokenID,refreshTokenId,refreshExpiresAt)
 
 	if err !=nil {
 		a.Logger.Error("Failed to rotate refresh token",zap.Error(err))
@@ -534,7 +533,7 @@ func (a *AuthHandler) RequestDelete(w http.ResponseWriter, r * http.Request){
 	}
 
 	// get the users info from the user
-	user,err:=repository.FindUserById(ctx,a.DB,userCtxInfo.UserId)
+	user,err:=a.UsersRepo.FindUserById(ctx,userCtxInfo.UserId)
 	if err != nil {
 		a.Logger.Error("Failed to get user info",zap.Error(err))
 
@@ -687,7 +686,7 @@ func (a *AuthHandler) DeleteMe(w http.ResponseWriter, r *http.Request){
 		return	
 	}
 
-	err= repository.DeleteUserAccountById(ctx,a.DB,userCtxInfo.UserId)
+	err= a.UsersRepo.DeleteUserAccountById(ctx,userCtxInfo.UserId)
 
 	if err != nil {
 		switch {
@@ -779,7 +778,7 @@ func (a *AuthHandler)GetMe(w http.ResponseWriter, r * http.Request){
 	}
 	
 	// if the user was not in the cache, get from the database
-	user,err= repository.FindUserById(ctx,a.DB,ctxUser.UserId)
+	user,err= a.UsersRepo.FindUserById(ctx,ctxUser.UserId)
 
 	if err != nil {
 		if errors.Is(err, models.ErrNotFound){

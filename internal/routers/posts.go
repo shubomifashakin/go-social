@@ -1,7 +1,6 @@
 package routers
 
 import (
-	"database/sql"
 	"net/http"
 	"time"
 
@@ -9,14 +8,15 @@ import (
 	"github.com/shubomifashakin/go-social/internal/handlers"
 	"github.com/shubomifashakin/go-social/internal/middlewares"
 	"github.com/shubomifashakin/go-social/internal/models"
+	"github.com/shubomifashakin/go-social/internal/repository"
 	"go.uber.org/zap"
 )
 
-func CreatePostRouter(m *http.ServeMux, db *sql.DB, cache *cache.Cache, logger *zap.Logger) {
+func CreatePostRouter(m *http.ServeMux, postsRepo *repository.PostsRepository, cache *cache.Cache, logger *zap.Logger) {
 	postsInstance:=&handlers.PostsHandler{	
-		DB: db,
 		Cache: cache,
 		Logger: logger,
+		PostsRepo: postsRepo,
 	}
 
 	isAuthorizedMware:=middlewares.IsAuthorized{Logger: logger}

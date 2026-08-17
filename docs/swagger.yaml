@@ -99,7 +99,7 @@ info:
   title: go-social API
   version: "1.0"
 paths:
-  /login:
+  /auth/login:
     post:
       consumes:
       - application/json
@@ -133,7 +133,7 @@ paths:
       summary: Sign in
       tags:
       - auth
-  /logout:
+  /auth/logout:
     post:
       consumes:
       - application/json
@@ -163,7 +163,7 @@ paths:
       summary: Log Out
       tags:
       - auth
-  /me:
+  /auth/me:
     delete:
       consumes:
       - application/json
@@ -225,6 +225,98 @@ paths:
       security:
       - cookieAuth: []
       summary: Get the logged in users details
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refreshes the users session
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+      security:
+      - refreshCookieAuth: []
+      summary: Refresh token
+      tags:
+      - auth
+  /auth/request-delete-account:
+    post:
+      consumes:
+      - application/json
+      description: Requests a delete code so the user can delete their account
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+      security:
+      - cookieAuth: []
+      summary: Request Delete Code
+      tags:
+      - auth
+  /auth/sign-up:
+    post:
+      consumes:
+      - application/json
+      description: This creates the account
+      parameters:
+      - description: User details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.UserSignup'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+      summary: Create a an account
       tags:
       - auth
   /posts:
@@ -369,98 +461,6 @@ paths:
       summary: Get a post
       tags:
       - posts
-  /refresh:
-    post:
-      consumes:
-      - application/json
-      description: Refreshes the users session
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.MessageResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.MessageResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/models.MessageResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/models.MessageResponse'
-      security:
-      - refreshCookieAuth: []
-      summary: Refresh token
-      tags:
-      - auth
-  /request-delete-account:
-    post:
-      consumes:
-      - application/json
-      description: Requests a delete code so the user can delete their account
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.MessageResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.MessageResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/models.MessageResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/models.MessageResponse'
-      security:
-      - cookieAuth: []
-      summary: Request Delete Code
-      tags:
-      - auth
-  /sign-up:
-    post:
-      consumes:
-      - application/json
-      description: This creates the account
-      parameters:
-      - description: User details
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/models.UserSignup'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/models.MessageResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.MessageResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/models.MessageResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/models.MessageResponse'
-      summary: Create a an account
-      tags:
-      - auth
   /users/{id}/posts:
     get:
       consumes:
