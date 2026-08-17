@@ -11,11 +11,10 @@ import (
 	"github.com/shubomifashakin/go-social/internal/mailer"
 	"github.com/shubomifashakin/go-social/internal/middlewares"
 	"github.com/shubomifashakin/go-social/internal/models"
-	"github.com/shubomifashakin/go-social/internal/repository"
 	"go.uber.org/zap"
 )
 
-func CreateAuthRouter(m *http.ServeMux, usersRepo *repository.UsersRepository, cache *cache.Cache, mailer *mailer.Mailer, logger *zap.Logger, fromMail string) {
+func CreateAuthRouter(m *http.ServeMux, usersRepo handlers.UsersRepo, cache *cache.Cache, mailer *mailer.Mailer, logger *zap.Logger, fromMail string) {
 	authInstance:=&handlers.AuthHandler{	
 		Cache: cache,
 		Mailer: mailer,

@@ -15,6 +15,7 @@ import (
 	"github.com/shubomifashakin/go-social/internal/cache"
 	"github.com/shubomifashakin/go-social/internal/db"
 	"github.com/shubomifashakin/go-social/internal/mailer"
+	"github.com/shubomifashakin/go-social/internal/repository"
 	"github.com/shubomifashakin/go-social/internal/routers"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -106,7 +107,14 @@ func main() {
 	// create the instance of the mailer
 	resendInstance:= mailer.NewMailer(resendApiKey)
 
-	mux := routers.RegisterRouter(environment, db, redisInstance, resendInstance, logger, fromMail)
+	usersRepo:= &repository.UsersRepository{
+		Db: db,
+	}
+	postsRepo:= &repository.PostsRepository{
+		Db: db,
+	}
+
+	mux := routers.RegisterRouter(environment, usersRepo,postsRepo, redisInstance, resendInstance, logger, fromMail)
 
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"http://localhost:3001"},

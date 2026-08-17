@@ -13,13 +13,19 @@ import (
 	"github.com/shubomifashakin/go-social/internal/cache"
 	"github.com/shubomifashakin/go-social/internal/middlewares"
 	"github.com/shubomifashakin/go-social/internal/models"
-	"github.com/shubomifashakin/go-social/internal/repository"
 	"github.com/shubomifashakin/go-social/pkg/utils"
 	"go.uber.org/zap"
 )
 
+type PostsRepo interface {
+	CreatePost(ctx context.Context, userId string, post models.CreatePost) (string, error)
+	DeletePostById(ctx context.Context, postId string, userId string) error
+	GetPostById(ctx context.Context, postId string) (models.Post, error)
+	GetPaginatedPostsForUser(ctx context.Context, userId string, limit int, cursor string) ([]models.Post, error)
+}
+
 type PostsHandler struct {
-	PostsRepo *repository.PostsRepository
+	PostsRepo PostsRepo
 	Cache    *cache.Cache
 	Logger   *zap.Logger
 }
